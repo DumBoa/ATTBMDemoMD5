@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MD5 Interactive Demo</title>
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --card: #121821;
+      --muted: #9aa4b2;
+      --fg: #e6edf3;
+      --acc: #4ea1ff;
+      --ok: #19c37d;
+      --warn: #f39c12;
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font: 14px/1.5 system-ui, Segoe UI, Roboto, Helvetica, Arial
+    }
+
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px
+    }
+
+    h1 {
+      font-size: 24px;
+      margin: 0 0 16px
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 16px
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid #1f2630;
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, .25)
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap
+    }
+
+    label {
+      font-weight: 600
+    }
+
+    textarea,
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid #243041;
+      background: #0f141c;
+      color: var(--fg)
+    }
+
+    button {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #243041;
+      background: #111a27;
+      color: var(--fg);
+      cursor: pointer
+    }
+
+    button.primary {
+      background: var(--acc);
+      border-color: transparent;
+      color: #071019;
+      font-weight: 700
+    }
+
+    button:disabled {
+      opacity: .5;
+      cursor: not-allowed
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #0e1622;
+      border: 1px solid #273244;
+      color: var(--muted);
+      font-size: 12px
+    }
+
+    .muted {
+      color: var(--muted)
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      word-break: break-all
+    }
+
+    .state {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px
+    }
+
+    .state .box {
+      background: #0f141c;
+      border: 1px solid #1c2430;
+      border-radius: 12px;
+      padding: 10px
+    }
+
+    .kvs {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 6px 10px
+    }
+
+    .hr {
+      height: 1px;
+      background: #1c2430;
+      margin: 10px 0
+    }
+
+    .small {
+      font-size: 12px
+    }
+
+    .flex {
+      display: flex;
+      gap: 8px;
+      align-items: center
+    }
+
+    .scroll {
+      max-height: 240px;
+      overflow: auto;
+      border: 1px dashed #283244;
+      border-radius: 10px;
+      padding: 8px
+    }
+
+    .right {
+      justify-content: flex-end
+    }
+
+    .warn {
+      color: var(--warn)
+    }
+
+    .ok {
+      color: var(--ok)
+    }
+
+    .tag {
+      font-size: 12px;
+      background: #0b131d;
+      border: 1px solid #283142;
+      padding: 2px 6px;
+      border-radius: 6px
+    }
+
+    .code {
+      background: #0f141c;
+      border: 1px solid #1c2430;
+      border-radius: 8px;
+      padding: 8px
+    }
+
+    .range {
+      width: 160px
+    }
+
+    .footer {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted)
+    }
+
+    .match {
+      color: var(--ok);
+    }
+
+    .mismatch {
+      color: var(--warn);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <h1>MD5 Interactive Demo</h1>
+
+    <div class="grid">
+      <!-- LEFT: Controls and Visuals -->
+      <div class="card">
+        <div class="row">
+          <div style="flex:1 1 auto">
+            <label for="msg">Chuỗi vào</label>
+            <textarea id="msg" rows="3" placeholder="Nhập chuỗi...">hello</textarea>
+          </div>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button id="btnPrepare" class="primary">Chuẩn bị & Tạo bước</button>
+          <button id="btnRun">Chạy hết</button>
+          <button id="btnPrev">◀ Trước</button>
+          <button id="btnNext">Tiếp ▶</button>
+          <button id="btnAuto">Tự động</button>
+          <label class="pill">Tốc độ</label>
+          <input id="speed" class="range" type="range" min="100" max="1500" value="500" />
+          <div class="pill" id="progress">0/0</div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="row">
+          <div class="pill" id="phase">phase: idle</div>
+          <div class="pill" id="blk">block: -</div>
+          <div class="pill" id="step">step: -</div>
+          <div class="pill" id="func">F/G/H/I: -</div>
+          <div class="pill" id="shift">rotate s: -</div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="kvs small">
+          <div class="muted">M[k] (word)</div>
+          <div class="mono" id="msgWord">-</div>
+          <div class="muted">T[i] (const)</div>
+          <div class="mono" id="constT">-</div>
+          <div class="muted">Cộng trước xoay</div>
+          <div class="mono" id="preRot">-</div>
+          <div class="muted">Sau xoay</div>
+          <div class="mono" id="postRot">-</div>
+          <div class="muted">Mô tả</div>
+          <div id="desc" class="muted"></div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="state">
+          <div class="box">
+            <div class="muted small">A</div>
+            <div class="mono" id="A">-</div>
+          </div>
+          <div class="box">
+            <div class="muted small">B</div>
+            <div class="mono" id="B">-</div>
+          </div>
+          <div class="box">
+            <div class="muted small">C</div>
+            <div class="mono" id="C">-</div>
+          </div>
+          <div class="box">
+            <div class="muted small">D</div>
+            <div class="mono" id="D">-</div>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div>
+          <div class="muted">Khối 512-bit hiện tại (hex)</div>
+          <div class="scroll mono small" id="blockHex">-</div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: Padding + Digest -->
+      <div class="card">
+        <div class="muted">Padding</div>
+        <div class="code mono small" id="padInfo">-</div>
+        <div class="hr"></div>
+        <div class="muted">Padded message (hex)</div>
+        <div class="scroll mono small" id="padHex">-</div>
+        <div class="hr"></div>
+        <div class="muted">Kết quả MD5</div>
+        <div class="mono" style="font-size:20px" id="digest">—</div>
+        <div class="footer">MD5 demo: 4 round × 16 bước, Merkle–Damgård, little‑endian.
+          <span class="warn">Không dùng MD5 cho bảo mật.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== Utilities =====
+    const toHex32 = (x) => (x >>> 0).toString(16).padStart(8, '0');
+    const toHex = (arr) => Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+    const leftRotate = (x, s) => ((x << s) | (x >>> (32 - s))) >>> 0;
+
+    // S per round
+    const S = [
+      7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
+      5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20,
+      4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
+      6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21
+    ];
+
+    // K[i] = floor(abs(sin(i+1)) * 2^32)
+    const K = new Uint32Array(64);
+    for (let i = 0; i < 64; i++) {
+      K[i] = Math.floor(Math.abs(Math.sin(i + 1)) * 2 ** 32) >>> 0;
+    }
+
+    function utf8Bytes(str) {
+      return new TextEncoder().encode(str);
+    }
+
+    function padMD5(msgBytes) {
+      const origLenBits = msgBytes.length * 8;
+      // append 0x80 then zeros then 64-bit little-endian length
+      const with80 = new Uint8Array(msgBytes.length + 1);
+      with80.set(msgBytes); with80[msgBytes.length] = 0x80;
+      // compute zero pad length so that (len + 1 + pad + 8) % 64 === 0
+      let padZeroLen = (56 - with80.length % 64 + 64) % 64;
+      const padded = new Uint8Array(with80.length + padZeroLen + 8);
+      padded.set(with80);
+      // 64-bit little-endian length
+      const lenBytes = new Uint8Array(8);
+      const lenView = new DataView(lenBytes.buffer);
+      lenView.setBigUint64(0, BigInt(origLenBits), true);
+      for (let i = 0; i < 8; i++) padded[padded.length - 8 + i] = lenBytes[i];
+      return { padded, padZeroLen, origLenBits };
+    }
+
+    function words16(bytes, blockIndex) {
+      // return 16 little-endian 32-bit words for block
+      const base = blockIndex * 64; const M = new Uint32Array(16);
+      for (let i = 0; i < 16; i++) {
+        const j = base + i * 4;
+        M[i] = (bytes[j]) | (bytes[j + 1] << 8) | (bytes[j + 2] << 16) | (bytes[j + 3] << 24);
+      }
+      return M;
+    }
+
+    function F(x, y, z) { return (x & y) | (~x & z); }
+    function G(x, y, z) { return (x & z) | (y & ~z); }
+    function H(x, y, z) { return x ^ y ^ z; }
+    function I(x, y, z) { return y ^ (x | ~z); }
+
+    function fnFor(i) { if (i < 16) return { name: 'F', fn: F }; if (i < 32) return { name: 'G', fn: G }; if (i < 48) return { name: 'H', fn: H }; return { name: 'I', fn: I }; }
+
+    function indexK(i) { if (i < 16) return i; if (i < 32) return (5 * i + 1) % 16; if (i < 48) return (3 * i + 5) % 16; return (7 * i) % 16; }
+
+    // ===== Step recorder =====
+    function md5Steps(message) {
+      const bytes = (message instanceof Uint8Array) ? message : utf8Bytes(message);
+      const { padded, padZeroLen, origLenBits } = padMD5(bytes);
+
+      const steps = [];
+
+      // padding info
+      steps.push({
+        phase: 'padding',
+        desc: `Thêm 0x80, ${padZeroLen} byte 0x00, rồi độ dài 64-bit little-endian (${origLenBits} bit).`,
+        padHex: toHex(padded),
+        padInfo: `len(bit)=${origLenBits}
+append 0x80
+append ${padZeroLen}×0x00
+append length(64-bit LE)`,
+      });
+
+      const blocks = padded.length / 64;
+      let a0 = 0x67452301, b0 = 0xefcdab89, c0 = 0x98badcfe, d0 = 0x10325476;
+
+      for (let b = 0; b < blocks; b++) {
+        const M = words16(padded, b);
+        let A = a0, B = b0, C = c0, D = d0;
+        // capture block hex
+        const bh = toHex(padded.slice(b * 64, b * 64 + 64));
+        steps.push({ phase: 'block', block: b, desc: `Bắt đầu khối #${b}`, A, B, C, D, blockHex: bh });
+
+        for (let i = 0; i < 64; i++) {
+          const { name, fn } = fnFor(i);
+          const k = indexK(i);
+          const s = S[i];
+          const f = fn(B, C, D) >>> 0;
+          const pre = (A + f + K[i] + M[k]) >>> 0;
+          const rot = leftRotate(pre, s);
+          const newB = (B + rot) >>> 0;
+          // record step
+          steps.push({
+            phase: 'round', block: b, i,
+            func: name, s,
+            k,
+            constT: K[i] >>> 0,
+            Mword: M[k] >>> 0,
+            pre, rot,
+            A_before: A >>> 0, B_before: B >>> 0, C_before: C >>> 0, D_before: D >>> 0,
+            A_after: D >>> 0, B_after: newB >>> 0, C_after: B >>> 0, D_after: C >>> 0,
+            desc: `i=${i} dùng ${name}, k=${k}, xoay ${s}`,
+            blockHex: bh
+          });
+          // MD5 step update
+          A = D >>> 0;
+          D = C >>> 0;
+          C = B >>> 0;
+          B = newB >>> 0;
+        }
+
+        a0 = (a0 + A) >>> 0;
+        b0 = (b0 + B) >>> 0;
+        c0 = (c0 + C) >>> 0;
+        d0 = (d0 + D) >>> 0;
+
+        steps.push({ phase: 'add-chunk', block: b, A: a0, B: b0, C: c0, D: d0, desc: `Cộng vào giá trị khởi tạo (IV)`, blockHex: bh });
+      }
+
+      // produce digest little-endian of a0..d0
+      const out = new Uint8Array(16);
+      const words = [a0, b0, c0, d0];
+      for (let i = 0; i < 4; i++) {
+        out[i * 4 + 0] = words[i] & 0xff;
+        out[i * 4 + 1] = (words[i] >>> 8) & 0xff;
+        out[i * 4 + 2] = (words[i] >>> 16) & 0xff;
+        out[i * 4 + 3] = (words[i] >>> 24) & 0xff;
+      }
+      steps.push({ phase: 'done', digest: toHex(out), desc: 'Hoàn tất' });
+
+      return steps;
+    }
+
+    // ===== UI Logic =====
+    const el = (id) => document.getElementById(id);
+    let steps = [];
+    let idx = 0; // current step index
+    let autoTimer = null;
+    let lastMsg = '';
+
+    function render() {
+      if (steps.length === 0) {
+        el('phase').textContent = 'phase: idle';
+        el('progress').textContent = '0/0';
+        return;
+      }
+      const s = steps[idx];
+      el('progress').textContent = `${idx + 1}/${steps.length}`;
+      el('phase').textContent = `phase: ${s.phase}`;
+      el('blk').textContent = `block: ${s.block ?? '-'}`;
+      el('step').textContent = `step: ${s.i ?? '-'}`;
+      el('func').textContent = `F/G/H/I: ${s.func ?? '-'}`;
+      el('shift').textContent = `rotate s: ${s.s ?? '-'}`;
+
+      el('msgWord').textContent = s.Mword !== undefined ? `0x${toHex32(s.Mword)}` : '-';
+      el('constT').textContent = s.constT !== undefined ? `0x${toHex32(s.constT)}` : '-';
+      el('preRot').textContent = s.pre !== undefined ? `0x${toHex32(s.pre)}` : '-';
+      el('postRot').textContent = s.rot !== undefined ? `0x${toHex32(s.rot)}` : '-';
+      el('desc').textContent = s.desc || '';
+
+      el('A').textContent = s.A !== undefined ? `0x${toHex32(s.A)}` : s.A_after !== undefined ? `0x${toHex32(s.A_after)}` : '-';
+      el('B').textContent = s.B !== undefined ? `0x${toHex32(s.B)}` : s.B_after !== undefined ? `0x${toHex32(s.B_after)}` : '-';
+      el('C').textContent = s.C !== undefined ? `0x${toHex32(s.C)}` : s.C_after !== undefined ? `0x${toHex32(s.C_after)}` : '-';
+      el('D').textContent = s.D !== undefined ? `0x${toHex32(s.D)}` : s.D_after !== undefined ? `0x${toHex32(s.D_after)}` : '-';
+
+      el('blockHex').textContent = s.blockHex || '-';
+
+      if (s.phase === 'padding') {
+        el('padInfo').textContent = s.padInfo;
+        el('padHex').textContent = s.padHex;
+      }
+
+      if (s.phase === 'done') {
+        // show both internal calc and verification
+        const calc = s.digest;
+        let verified = 'n/a';
+        try {
+          verified = md5(lastMsg);
+        } catch (e) {
+          verified = 'err';
+        }
+        const match = calc === verified;
+        el('digest').textContent = `${calc}    (verified: ${verified})`;
+        el('digest').className = match ? 'mono match' : 'mono mismatch';
+      }
+    }
+
+    function prepare() {
+      stopAuto();
+      const msg = el('msg').value;
+      lastMsg = msg;
+      steps = md5Steps(msg);
+      idx = 0; render();
+    }
+    function runAll() {
+      stopAuto();
+      if (steps.length === 0) prepare();
+      idx = steps.length - 1; render();
+    }
+    function next() { if (steps.length) { idx = Math.min(idx + 1, steps.length - 1); render(); } }
+    function prev() { if (steps.length) { idx = Math.max(idx - 1, 0); render(); } }
+
+    function auto() {
+      stopAuto();
+      if (steps.length === 0) prepare();
+      const tick = () => {
+        if (idx < steps.length - 1) { idx++; render(); autoTimer = setTimeout(tick, +el('speed').value); }
+        else { stopAuto(); }
+      };
+      autoTimer = setTimeout(tick, +el('speed').value);
+    }
+    function stopAuto() { if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; } }
+
+    // wire buttons
+    el('btnPrepare').onclick = prepare;
+    el('btnRun').onclick = runAll;
+    el('btnNext').onclick = next;
+    el('btnPrev').onclick = prev;
+    el('btnAuto').onclick = auto;
+
+    // bootstrap
+    prepare();
+  </script>
+
+  <script>
+    // MD5 implementation - fixed version
+    function md5(str) {
+      function rotateLeft(lValue, iShiftBits) {
+        return (lValue << iShiftBits) | (lValue >>> (32 - iShiftBits));
+      }
+
+      function addUnsigned(lX, lY) {
+        const lX8 = (lX & 0x80000000);
+        const lY8 = (lY & 0x80000000);
+        const lX4 = (lX & 0x40000000);
+        const lY4 = (lY & 0x40000000);
+        const lResult = (lX & 0x3FFFFFFF) + (lY & 0x3FFFFFFF);
+
+        if (lX4 & lY4) {
+          return (lResult ^ 0x80000000 ^ lX8 ^ lY8);
+        }
+        if (lX4 | lY4) {
+          if (lResult & 0x40000000) {
+            return (lResult ^ 0xC0000000 ^ lX8 ^ lY8);
+          } else {
+            return (lResult ^ 0x40000000 ^ lX8 ^ lY8);
+          }
+        } else {
+          return (lResult ^ lX8 ^ lY8);
+        }
+      }
+
+      function F(x, y, z) { return (x & y) | (~x & z); }
+      function G(x, y, z) { return (x & z) | (y & ~z); }
+      function H(x, y, z) { return x ^ y ^ z; }
+      function I(x, y, z) { return y ^ (x | ~z); }
+
+      function FF(a, b, c, d, x, s, ac) {
+        a = addUnsigned(a, addUnsigned(addUnsigned(F(b, c, d), x), ac));
+        return addUnsigned(rotateLeft(a, s), b);
+      }
+
+      function GG(a, b, c, d, x, s, ac) {
+        a = addUnsigned(a, addUnsigned(addUnsigned(G(b, c, d), x), ac));
+        return addUnsigned(rotateLeft(a, s), b);
+      }
+
+      function HH(a, b, c, d, x, s, ac) {
+        a = addUnsigned(a, addUnsigned(addUnsigned(H(b, c, d), x), ac));
+        return addUnsigned(rotateLeft(a, s), b);
+      }
+
+      function II(a, b, c, d, x, s, ac) {
+        a = addUnsigned(a, addUnsigned(addUnsigned(I(b, c, d), x), ac));
+        return addUnsigned(rotateLeft(a, s), b);
+      }
+
+      function convertToWordArray(str) {
+        // Convert string to UTF-8 bytes first
+        const utf8Bytes = new TextEncoder().encode(str);
+        const lMessageLength = utf8Bytes.length;
+
+        let lNumberOfWords_temp1 = lMessageLength + 8;
+        let lNumberOfWords_temp2 = (lNumberOfWords_temp1 - (lNumberOfWords_temp1 % 64)) / 64;
+        let lNumberOfWords = (lNumberOfWords_temp2 + 1) * 16;
+        let lWordArray = new Array(lNumberOfWords - 1);
+        let lBytePosition = 0;
+        let lByteCount = 0;
+
+        // Initialize array with zeros
+        for (let i = 0; i < lNumberOfWords; i++) {
+          lWordArray[i] = 0;
+        }
+
+        // Fill the word array with UTF-8 bytes
+        while (lByteCount < lMessageLength) {
+          lWordArray[lByteCount >> 2] |= utf8Bytes[lByteCount] << ((lByteCount % 4) * 8);
+          lByteCount++;
+        }
+
+        // Append the bit '1' at the end of the message
+        lWordArray[lByteCount >> 2] |= 0x80 << ((lByteCount % 4) * 8);
+
+        // Append length in bits at the end of the buffer
+        lWordArray[lNumberOfWords - 2] = lMessageLength << 3;
+        lWordArray[lNumberOfWords - 1] = lMessageLength >>> 29;
+
+        return lWordArray;
+      }
+
+      function wordToHex(lValue) {
+        let word = "";
+        for (let i = 0; i <= 3; i++) {
+          let byteValue = (lValue >>> (i * 8)) & 255;
+          word += byteValue.toString(16).padStart(2, '0');
+        }
+        return word;
+      }
+
+      let x = convertToWordArray(str);
+      let a = 0x67452301;
+      let b = 0xEFCDAB89;
+      let c = 0x98BADCFE;
+      let d = 0x10325476;
+
+      for (let i = 0; i < x.length; i += 16) {
+        let AA = a;
+        let BB = b;
+        let CC = c;
+        let DD = d;
+
+        a = FF(a, b, c, d, x[i + 0], 7, 0xd76aa478);
+        d = FF(d, a, b, c, x[i + 1], 12, 0xe8c7b756);
+        c = FF(c, d, a, b, x[i + 2], 17, 0x242070db);
+        b = FF(b, c, d, a, x[i + 3], 22, 0xc1bdceee);
+
+        a = FF(a, b, c, d, x[i + 4], 7, 0xf57c0faf);
+        d = FF(d, a, b, c, x[i + 5], 12, 0x4787c62a);
+        c = FF(c, d, a, b, x[i + 6], 17, 0xa8304613);
+        b = FF(b, c, d, a, x[i + 7], 22, 0xfd469501);
+
+        a = FF(a, b, c, d, x[i + 8], 7, 0x698098d8);
+        d = FF(d, a, b, c, x[i + 9], 12, 0x8b44f7af);
+        c = FF(c, d, a, b, x[i + 10], 17, 0xffff5bb1);
+        b = FF(b, c, d, a, x[i + 11], 22, 0x895cd7be);
+
+        a = FF(a, b, c, d, x[i + 12], 7, 0x6b901122);
+        d = FF(d, a, b, c, x[i + 13], 12, 0xfd987193);
+        c = FF(c, d, a, b, x[i + 14], 17, 0xa679438e);
+        b = FF(b, c, d, a, x[i + 15], 22, 0x49b40821);
+
+        a = GG(a, b, c, d, x[i + 1], 5, 0xf61e2562);
+        d = GG(d, a, b, c, x[i + 6], 9, 0xc040b340);
+        c = GG(c, d, a, b, x[i + 11], 14, 0x265e5a51);
+        b = GG(b, c, d, a, x[i + 0], 20, 0xe9b6c7aa);
+
+        a = GG(a, b, c, d, x[i + 5], 5, 0xd62f105d);
+        d = GG(d, a, b, c, x[i + 10], 9, 0x02441453);
+        c = GG(c, d, a, b, x[i + 15], 14, 0xd8a1e681);
+        b = GG(b, c, d, a, x[i + 4], 20, 0xe7d3fbc8);
+
+        a = GG(a, b, c, d, x[i + 9], 5, 0x21e1cde6);
+        d = GG(d, a, b, c, x[i + 14], 9, 0xc33707d6);
+        c = GG(c, d, a, b, x[i + 3], 14, 0xf4d50d87);
+        b = GG(b, c, d, a, x[i + 8], 20, 0x455a14ed);
+
+        a = GG(a, b, c, d, x[i + 13], 5, 0xa9e3e905);
+        d = GG(d, a, b, c, x[i + 2], 9, 0xfcefa3f8);
+        c = GG(c, d, a, b, x[i + 7], 14, 0x676f02d9);
+        b = GG(b, c, d, a, x[i + 12], 20, 0x8d2a4c8a);
+
+        a = HH(a, b, c, d, x[i + 5], 4, 0xfffa3942);
+        d = HH(d, a, b, c, x[i + 8], 11, 0x8771f681);
+        c = HH(c, d, a, b, x[i + 11], 16, 0x6d9d6122);
+        b = HH(b, c, d, a, x[i + 14], 23, 0xfde5380c);
+
+        a = HH(a, b, c, d, x[i + 1], 4, 0xa4beea44);
+        d = HH(d, a, b, c, x[i + 4], 11, 0x4bdecfa9);
+        c = HH(c, d, a, b, x[i + 7], 16, 0xf6bb4b60);
+        b = HH(b, c, d, a, x[i + 10], 23, 0xbebfbc70);
+
+        a = HH(a, b, c, d, x[i + 13], 4, 0x289b7ec6);
+        d = HH(d, a, b, c, x[i + 0], 11, 0xeaa127fa);
+        c = HH(c, d, a, b, x[i + 3], 16, 0xd4ef3085);
+        b = HH(b, c, d, a, x[i + 6], 23, 0x04881d05);
+
+        a = HH(a, b, c, d, x[i + 9], 4, 0xd9d4d039);
+        d = HH(d, a, b, c, x[i + 12], 11, 0xe6db99e5);
+        c = HH(c, d, a, b, x[i + 15], 16, 0x1fa27cf8);
+        b = HH(b, c, d, a, x[i + 2], 23, 0xc4ac5665);
+
+        a = II(a, b, c, d, x[i + 0], 6, 0xf4292244);
+        d = II(d, a, b, c, x[i + 7], 10, 0x432aff97);
+        c = II(c, d, a, b, x[i + 14], 15, 0xab9423a7);
+        b = II(b, c, d, a, x[i + 5], 21, 0xfc93a039);
+
+        a = II(a, b, c, d, x[i + 12], 6, 0x655b59c3);
+        d = II(d, a, b, c, x[i + 3], 10, 0x8f0ccc92);
+        c = II(c, d, a, b, x[i + 10], 15, 0xffeff47d);
+        b = II(b, c, d, a, x[i + 1], 21, 0x85845dd1);
+
+        a = II(a, b, c, d, x[i + 8], 6, 0x6fa87e4f);
+        d = II(d, a, b, c, x[i + 15], 10, 0xfe2ce6e0);
+        c = II(c, d, a, b, x[i + 6], 15, 0xa3014314);
+        b = II(b, c, d, a, x[i + 13], 21, 0x4e0811a1);
+
+        a = II(a, b, c, d, x[i + 4], 6, 0xf7537e82);
+        d = II(d, a, b, c, x[i + 11], 10, 0xbd3af235);
+        c = II(c, d, a, b, x[i + 2], 15, 0x2ad7d2bb);
+        b = II(b, c, d, a, x[i + 9], 21, 0xeb86d391);
+
+        a = addUnsigned(a, AA);
+        b = addUnsigned(b, BB);
+        c = addUnsigned(c, CC);
+        d = addUnsigned(d, DD);
+      }
+
+      return wordToHex(a) + wordToHex(b) + wordToHex(c) + wordToHex(d);
+    }
+  </script>
+</body>
+
+</html>
